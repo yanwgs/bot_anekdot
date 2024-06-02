@@ -1,5 +1,3 @@
-// src/main/java/com/example/anekdotjavabot/service/TelegramBotService.java
-
 package com.example.anekdotjavabot.service;
 
 import com.example.anekdotjavabot.model.Joke;
@@ -12,6 +10,7 @@ import com.pengrad.telegrambot.request.SendMessage;
 import com.pengrad.telegrambot.request.SetMyCommands;
 import jakarta.annotation.PostConstruct;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
@@ -45,6 +44,7 @@ public class TelegramBotService {
         BotCommand[] commands = {
                 new BotCommand("/start", "Запустить бота"),
                 new BotCommand("/joke", "Получить случайный анекдот"),
+                new BotCommand("/topjokes", "Получить топ-5 анекдотов"),
                 new BotCommand("/addjoke", "Добавить анекдот. Используйте формат: /addjoke <текст анекдота>"),
                 new BotCommand("/deletejoke", "Удалить анекдот по id. Используйте формат: /deletejoke <id>"),
                 new BotCommand("/updatejoke", "Обновить анекдот по id. Используйте формат: /updatejoke <id> <новый текст анекдота>"),
@@ -57,11 +57,14 @@ public class TelegramBotService {
         if (update.message() != null && update.message().text() != null) {
             String messageText = update.message().text();
             long chatId = update.message().chat().id();
+            Long userId = update.message().from().id();  // Получение userId
 
             if ("/start".equals(messageText)) {
                 sendWelcomeMessage(chatId);
             } else if ("/joke".equals(messageText)) {
-                sendRandomJoke(chatId);
+                sendRandomJoke(chatId, userId);
+            } else if ("/topjokes".equals(messageText)) {
+                sendTopJokes(chatId);
             } else if ("/alljokes".equals(messageText)) {
                 sendAllJokes(chatId);
             } else if (messageText.startsWith("/addjoke ")) {
@@ -80,19 +83,27 @@ public class TelegramBotService {
         sendMessage(chatId, "Привет! Я бот для анекдотов. Используй команды /joke для получения случайного анекдота.");
     }
 
-    private void sendRandomJoke(long chatId) {
-        List<Joke> jokes = jokeService.getAllJokes();
+    private void sendRandomJoke(long chatId, Long userId) {
+        jokeService.getRandomJoke().ifPresentOrElse(
+                joke -> {
+                    sendMessage(chatId, joke.getText());
+                    jokeService.logJokeCall(userId, joke);  // Логируем вызов анекдота
+                },
+                () -> sendMessage(chatId, "Анекдотов пока нет.")
+        );
+    }
+
+    private void sendTopJokes(long chatId) {
+        List<Joke> jokes = jokeService.getTop5PopularJokes();
         if (jokes.isEmpty()) {
             sendMessage(chatId, "Анекдотов пока нет.");
         } else {
-            int randomIndex = ThreadLocalRandom.current().nextInt(jokes.size());
-            Joke randomJoke = jokes.get(randomIndex);
-            sendMessage(chatId, randomJoke.getText());
+            jokes.forEach(joke -> sendMessage(chatId, "Анекдот #" + joke.getId() + ":\n" + joke.getText()));
         }
     }
 
     private void sendAllJokes(long chatId) {
-        List<Joke> jokes = jokeService.getAllJokes();
+        List<Joke> jokes = jokeService.getAllJokes(PageRequest.of(0, Integer.MAX_VALUE)).getContent();
         if (jokes.isEmpty()) {
             sendMessage(chatId, "Анекдотов пока нет.");
         } else {

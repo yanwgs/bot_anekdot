@@ -1,10 +1,12 @@
-// src/main/java/com/example/anekdotjavabot/service/JokeService.java
-
 package com.example.anekdotjavabot.service;
 
 import com.example.anekdotjavabot.model.Joke;
+import com.example.anekdotjavabot.model.JokeCall;
 import com.example.anekdotjavabot.repository.JokeRepository;
-import org.springframework.beans.factory.annotation.Autowired;
+import com.example.anekdotjavabot.repository.JokeCallRepository;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import lombok.RequiredArgsConstructor;
 
@@ -17,9 +19,10 @@ import java.util.Optional;
 public class JokeService {
 
     private final JokeRepository jokeRepository;
+    private final JokeCallRepository jokeCallRepository;
 
-    public List<Joke> getAllJokes() {
-        return jokeRepository.findAll();
+    public Page<Joke> getAllJokes(Pageable pageable) {
+        return jokeRepository.findAll(pageable);
     }
 
     public Optional<Joke> getJokeById(Long id) {
@@ -43,5 +46,23 @@ public class JokeService {
 
     public void deleteJoke(Long id) {
         jokeRepository.deleteById(id);
+    }
+
+    public List<Joke> getTop5PopularJokes() {
+        Pageable pageable = PageRequest.of(0, 5);
+        return jokeRepository.findTop5PopularJokes(pageable).getContent();
+    }
+
+    public Optional<Joke> getRandomJoke() {
+        return jokeRepository.findRandomJoke();
+    }
+
+    public void logJokeCall(Long userId, Joke joke) {
+        JokeCall jokeCall = JokeCall.builder()
+                .userId(userId)
+                .callTime(LocalDateTime.now())
+                .joke(joke)
+                .build();
+        jokeCallRepository.save(jokeCall);
     }
 }

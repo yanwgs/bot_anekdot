@@ -1,0 +1,58 @@
+databaseChangeLog:
+  - changeSet:
+      id: 1
+      author: yana
+      changes:
+        - createTable:
+            tableName: joke
+            columns:
+              - column:
+                  name: id
+                  type: BIGINT
+                  autoIncrement: true
+                  constraints:
+                    primaryKey: true
+              - column:
+                  name: text
+                  type: VARCHAR(500)
+              - column:
+                  name: created_at
+                  type: TIMESTAMP
+              - column:
+                  name: updated_at
+                  type: TIMESTAMP
+
+  - changeSet:
+      id: 2
+      author: yana
+      changes:
+        - createSequence:
+            sequenceName: joke_seq
+
+  - changeSet:
+      id: 3
+      author: yana
+      changes:
+        - createTable:
+            tableName: joke_call
+            columns:
+              - column:
+                  name: id
+                  type: BIGINT
+                  autoIncrement: true
+                  constraints:
+                    primaryKey: true
+              - column:
+                  name: user_id
+                  type: BIGINT
+              - column:
+                  name: call_time
+                  type: TIMESTAMP
+              - column:
+                  name: joke_id
+                  type: BIGINT
+                  constraints:
+                    foreignKeyName: fk_joke
+                    references: joke(id)
+        - createSequence:
+            sequenceName: joke_call_seq
